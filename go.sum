@@ -1,2 +1,4 @@
+github.com/any-call/gobase v1.9.4 h1:QK4zkQRl95UbuNDTzhK/bZOM3/XgQ9pcPIuZUs+nBgo=
+github.com/any-call/gobase v1.9.4/go.mod h1:1AKE2qwTDVjwHs6MZLkCVNgPu5rLbdnCPX0B9ayFjA4=
 github.com/mr-tron/base58 v1.2.0 h1:T/HDJBh4ZCPbU39/+c3rRvE0uKBQlU27+QI8LJ4t64o=
 github.com/mr-tron/base58 v1.2.0/go.mod h1:BinMc/sQntlIE1frQmRFPUoPA1Zkr8VRgBdjWI2mNwc=
