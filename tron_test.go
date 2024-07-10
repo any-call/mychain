@@ -9,7 +9,7 @@ func TestTronChain_HexToTronAddress(t *testing.T) {
 		return
 	}
 
-	t.Log("hex to tron addr is :", tronAddr)
+	t.Log("hex to tron addr is :", tronAddr, ImpTron().IsValidAddress(tronAddr))
 
 	hex, err := ImpTron().AddrToHexStr(tronAddr)
 	if err != nil {

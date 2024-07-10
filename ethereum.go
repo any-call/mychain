@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"github.com/any-call/gobase/util/mynet"
 	"net/http"
+	"regexp"
+	"strings"
 	"time"
 )
 
@@ -47,4 +49,26 @@ func (self ethChain) GetBlockByNum(num int64, tout time.Duration) (info *EthBloc
 	}
 
 	return
+}
+
+func (self ethChain) IsValidAddress(address string) bool {
+	if strings.HasPrefix(address, "0x") == false {
+		return false
+	}
+
+	// Remove "0x" prefix if present
+	address = strings.TrimPrefix(address, "0x")
+
+	// Address should be exactly 40 characters long after removing "0x" prefix
+	if len(address) != 40 {
+		return false
+	}
+
+	// Check if all characters are valid hexadecimal characters
+	match, _ := regexp.MatchString("^[0-9a-fA-F]+$", address)
+	if !match {
+		return false
+	}
+
+	return true
 }

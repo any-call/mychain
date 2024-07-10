@@ -11,7 +11,9 @@ import (
 	"github.com/mr-tron/base58"
 	"io"
 	"net/http"
+	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -219,6 +221,26 @@ func (self tronChain) AddrToHexStr(tronAddr string) (string, error) {
 	// Convert the data bytes to hexadecimal string
 	hexStr := hex.EncodeToString(data)
 	return hexStr, nil
+}
+
+func (self tronChain) IsValidAddress(address string) bool {
+	// TRON address should be exactly 34 characters long
+	if len(address) != 34 {
+		return false
+	}
+
+	// TRON address should start with 'T'
+	if !strings.HasPrefix(address, "T") {
+		return false
+	}
+
+	// Check if all characters are valid Base58 characters
+	match, _ := regexp.MatchString("^[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]+$", address)
+	if !match {
+		return false
+	}
+
+	return true
 }
 
 func bytesEqual(a, b []byte) bool {
