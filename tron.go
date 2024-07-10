@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/any-call/gobase/util/mynet"
 	"github.com/mr-tron/base58"
@@ -169,7 +170,7 @@ func (self tronChain) GetBlockByLimitNext(startNum int32, endNum int32, tm time.
 	return
 }
 
-func (self tronChain) HexToTronAddress(hexStr string) (string, error) {
+func (self tronChain) HexToAddrStr(hexStr string) (string, error) {
 	// 解码16进制字符串为字节切片
 	data, err := hex.DecodeString(hexStr)
 	if err != nil {
@@ -188,4 +189,46 @@ func (self tronChain) HexToTronAddress(hexStr string) (string, error) {
 	// 进行Base58编码
 	encoded := base58.Encode(dataWithChecksum)
 	return encoded, nil
+}
+
+func (self tronChain) AddrToHexStr(tronAddr string) (string, error) {
+	//base58 decode
+	decoded, err := base58.Decode(tronAddr)
+	if err != nil {
+		return "", err
+	}
+
+	// Extract the checksum (last 4 bytes)
+	if len(decoded) < 4 {
+		return "", errors.New("invalid TRON address")
+	}
+	checksum := decoded[len(decoded)-4:]
+
+	// Remove the checksum to get the original data
+	data := decoded[:len(decoded)-4]
+
+	// Perform double SHA256 hashing to verify integrity
+	hash1 := sha256.Sum256(data)
+	hash2 := sha256.Sum256(hash1[:])
+
+	// Compare computed checksum with extracted checksum
+	if !bytesEqual(hash2[:4], checksum) {
+		return "", errors.New("checksum verification failed")
+	}
+
+	// Convert the data bytes to hexadecimal string
+	hexStr := hex.EncodeToString(data)
+	return hexStr, nil
+}
+
+func bytesEqual(a, b []byte) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
