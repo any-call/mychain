@@ -27,26 +27,13 @@ func TestTronChain_IsValidAddress(t *testing.T) {
 
 }
 
-//func TestTronChain_CreateNewAccount(t *testing.T) {
-//	// 生成一个使用 secp256k1 椭圆曲线的 ECDSA 私钥
-//	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-//	if err != nil {
-//		t.Error(err)
-//		return
-//	}
-//
-//	//// 从私钥派生公钥
-//	publicKey := privateKey.PublicKey
-//
-//	// 使用 TRON 的地址编码方式生成 TRON 地址
-//	tronAddress := address.PubkeyToAddress(publicKey)
-//	t.Log(tronAddress)
-//	// 打印私钥和 TRON 地址
-//	// Get the private key in bytes
-//	//privateKeyBytes := privateKey.D.Bytes()
-//	//
-//	//// Convert the private key to hexadecimal format
-//	//privateKeyHex := hex.EncodeToString(privateKeyBytes)
-//	//t.Logf("Private Key: %s\n", privateKeyHex)
-//	//t.Logf("生成的 TRON 地址: %s\n", tronAddress.String())
-//}
+func TestTronChain_CreateNewAccount(t *testing.T) {
+	r1, r2, err := ImpTron().CreateNewAccount()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Log("create ok, r1:", r1)
+	t.Log("create ok,r2", r2)
+}

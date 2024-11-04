@@ -6,3 +6,5 @@ require (
 	github.com/any-call/gobase v1.9.4
 	github.com/mr-tron/base58 v1.2.0
 )
+
+require golang.org/x/crypto v0.28.0 // indirect

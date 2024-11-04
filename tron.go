@@ -2,6 +2,9 @@ package mychain
 
 import (
 	"bytes"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -9,6 +12,7 @@ import (
 	"fmt"
 	"github.com/any-call/gobase/util/mynet"
 	"github.com/mr-tron/base58"
+	"golang.org/x/crypto/ripemd160"
 	"io"
 	"net/http"
 	"regexp"
@@ -230,6 +234,43 @@ func (self tronChain) IsValidAddress(address string) bool {
 	}
 
 	return true
+}
+
+func (self tronChain) CreateNewAccount() (adddress, privateInfo string, err error) {
+	// 使用 ECDSA (secp256k1) 曲线生成私钥
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return "", "", fmt.Errorf("生成私钥失败: %v", err)
+	}
+
+	// 从私钥生成公钥
+	pubKey := append(privateKey.PublicKey.X.Bytes(), privateKey.PublicKey.Y.Bytes()...)
+
+	// 对公钥进行 SHA256 哈希
+	hashSHA256 := sha256.New()
+	hashSHA256.Write(pubKey)
+	pubHash := hashSHA256.Sum(nil)
+
+	// 对 SHA256 哈希结果进行 RIPEMD160 哈希
+	ripemd160Hasher := ripemd160.New()
+	ripemd160Hasher.Write(pubHash)
+	pubRipemd160 := ripemd160Hasher.Sum(nil)
+
+	// 添加地址前缀 0x41（波场地址以 41 开头）
+	rawAddress := append([]byte{0x41}, pubRipemd160...)
+
+	// 计算地址的校验和：先 SHA256 再取前 4 字节
+	checksum := sha256.Sum256(rawAddress)
+	checksum = sha256.Sum256(checksum[:])
+	address := append(rawAddress, checksum[:4]...)
+
+	// 使用 Base58 编码地址
+	encodedAddress := base58.Encode(address)
+
+	// 将私钥转成十六进制
+	privKeyHex := hex.EncodeToString(privateKey.D.Bytes())
+
+	return encodedAddress, privKeyHex, nil
 }
 
 func bytesEqual(a, b []byte) bool {
