@@ -273,6 +273,48 @@ func (self tronChain) CreateNewAccount() (adddress, privateInfo string, err erro
 	return encodedAddress, privKeyHex, nil
 }
 
+func (self tronChain) GetAccountBalance(address string) (int64, error) {
+	url := "https://api.trongrid.io/v1/accounts/" + address
+
+	resp, err := http.Get(url)
+	if err != nil {
+		return 0, fmt.Errorf("查询账户失败: %v", err)
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode != 200 {
+		return 0, fmt.Errorf("获取账户信息失败，状态码: %d", resp.StatusCode)
+	}
+
+	var result struct {
+		Data []struct {
+			Balance int64 `json:"balance"`
+		} `json:"data"`
+		Success bool `json:"success"`
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return 0, fmt.Errorf("读取响应失败: %v", err)
+	}
+
+	err = json.Unmarshal(body, &result)
+	if err != nil {
+		return 0, fmt.Errorf("解析JSON失败: %v", err)
+	}
+
+	if !result.Success {
+		return 0, fmt.Errorf("response status fail")
+	}
+
+	if len(result.Data) > 0 {
+		return result.Data[0].Balance, nil
+	}
+	return 0, fmt.Errorf("未找到账户余额")
+}
+
 func bytesEqual(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false

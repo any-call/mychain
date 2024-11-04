@@ -37,3 +37,13 @@ func TestTronChain_CreateNewAccount(t *testing.T) {
 	t.Log("create ok, r1:", r1)
 	t.Log("create ok,r2", r2)
 }
+
+func TestTronChain_GetAccountBalance(t *testing.T) {
+	ret, err := ImpTron().GetAccountBalance("TPNY6i7Mm1WnwYhsS7rnRmL2TvVGo7hyjA")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Log("get balance:", ret)
+}
