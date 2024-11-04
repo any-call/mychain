@@ -14,8 +14,8 @@ import (
 	"github.com/mr-tron/base58"
 	"golang.org/x/crypto/ripemd160"
 	"io"
-	"io/ioutil"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strconv"
 	"time"
@@ -317,40 +317,16 @@ func (self tronChain) GetAccountBalanceTRX(address string) (float64, error) {
 	return 0, fmt.Errorf("未找到账户余额")
 }
 func (self tronChain) GetAccountBalanceTRC(address string) (float64, error) {
-	url := "https://api.trongrid.io/v1/accounts/" + address + "/tokens"
+	urlStr := "https://api.trongrid.io/account/token_asset_overview"
+	param := url.Values{}
+	param.Add("address", address)
+	mynet.GetQuery(urlStr, param, time.Second*5, func(ret []byte, httpCode int) error {
+		if httpCode != http.StatusOK {
+			return fmt.Errorf("")
+		}
 
-	resp, err := http.Get(url)
-	if err != nil {
-		return 0, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("failed to get TRC-10 tokens: %s", resp.Status)
-	}
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, err
-	}
-
-	type TokenBalance struct {
-		ID      string `json:"id"`
-		Balance int64  `json:"balance"`
-	}
-
-	// 解析 TRC-10 代币余额
-	var tokens []TokenBalance
-	if err := json.Unmarshal(body, &tokens); err != nil {
-		return 0, err
-	}
-
-	// 查找特定的 TRC-10 代币余额
-	//for _, token := range tokens {
-	//	if token.ID == trc10TokenID {
-	//		return token.Balance, nil // 返回 TRC-10 代币余额
-	//	}
-	//}
+		return nil
+	}, nil)
 
 	return 0, fmt.Errorf("token not found")
 }

@@ -53,6 +53,15 @@ func TestTronChain_GetAccountBalance(t *testing.T) {
 	t.Log("get balance:", ret, ret2)
 }
 
+func TestTronChain_GetAccountBalanceTRC(t *testing.T) {
+	ret, err := ImpTron().GetAccountBalanceTRC("TTYmKjuWUr5yJh24d66wg3SCdfFmBrsmgR")
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Log("get balance:", ret)
+}
+
 func TestTronChain_GetAccountTransactions(t *testing.T) {
 	ret, err := ImpTron().GetAccountTransactions("TTYmKjuWUr5yJh24d66wg3SCdfFmBrsmgR")
 	if err != nil {
