@@ -22,19 +22,27 @@ import (
 )
 
 type tronChain struct {
+	apiKey string
 }
 
-func ImpTron() tronChain {
-	return tronChain{}
+func ImpTron(token string) tronChain {
+	return tronChain{apiKey: token}
 }
 
 func (self tronChain) GetNowBlock(timeout time.Duration) (info *TronBlock, err error) {
-	if err := mynet.GetJson("https://api.trongrid.io/walletsolidity/getnowblock", nil, timeout, func(ret []byte, httpCode int) error {
-		if httpCode == http.StatusOK {
-			return json.Unmarshal(ret, &info)
-		}
-		return fmt.Errorf("http err code:%v", httpCode)
-	}, nil); err != nil {
+	if err = mynet.DoReq("GET", "https://api.trongrid.io/walletsolidity/getnowblock",
+		func(r *http.Request) (isTls bool, tm time.Duration, err error) {
+			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
+			return true, timeout, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode == http.StatusOK {
+				return json.Unmarshal(ret, &info)
+			}
+			return fmt.Errorf("http err code:%v", httpCode)
+		}, nil); err != nil {
 		return nil, err
 	}
 
@@ -46,6 +54,9 @@ func (self tronChain) GetBlock(num int32, includeTr bool, tm time.Duration) (inf
 		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
 			r.Header.Add("accept", "application/json")
 			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
 
 			if b, err := json.Marshal(map[string]any{
 				"id_or_num": fmt.Sprintf("%d", num),
@@ -76,6 +87,10 @@ func (self tronChain) GetBlockByNum(num int32, tm time.Duration) (info *TronBloc
 			r.Header.Add("accept", "application/json")
 			r.Header.Add("Content-Type", "application/json")
 
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
+
 			if b, err := json.Marshal(map[string]int32{
 				"num": num,
 			}); err != nil {
@@ -104,6 +119,10 @@ func (self tronChain) GetBlockByLatestNum(num int32, tm time.Duration) (list []T
 		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
 			r.Header.Add("accept", "application/json")
 			r.Header.Add("Content-Type", "application/json")
+
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
 
 			if b, err := json.Marshal(map[string]int32{
 				"num": num,
@@ -142,6 +161,9 @@ func (self tronChain) GetBlockByLimitNext(startNum int32, endNum int32, tm time.
 		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
 			r.Header.Add("accept", "application/json")
 			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
 
 			if b, err := json.Marshal(map[string]int32{
 				"startNum": startNum,
