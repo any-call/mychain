@@ -15,7 +15,6 @@ import (
 	"golang.org/x/crypto/ripemd160"
 	"io"
 	"net/http"
-	"net/url"
 	"regexp"
 	"strconv"
 	"time"
@@ -296,61 +295,50 @@ func (self tronChain) CreateNewAccount() (adddress, privateInfo string, err erro
 	return encodedAddress, privKeyHex, nil
 }
 
-// 查询账户余额
-func (self tronChain) GetAccountBalanceTRX(address string) (float64, error) {
+func (self tronChain) GetAccountBalance(address string) (*AccountInfo, error) {
 	url := "https://api.trongrid.io/v1/accounts/" + address
 
-	resp, err := http.Get(url)
-	if err != nil {
-		return 0, fmt.Errorf("查询账户失败: %v", err)
-	}
-	defer func() {
-		_ = resp.Body.Close()
-	}()
-
-	if resp.StatusCode != 200 {
-		return 0, fmt.Errorf("获取账户信息失败，状态码: %d", resp.StatusCode)
-	}
-
-	var result struct {
-		Data []struct {
-			Balance int64 `json:"balance"`
-		} `json:"data"`
-		Success bool `json:"success"`
-	}
-
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return 0, fmt.Errorf("读取响应失败: %v", err)
-	}
-
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return 0, fmt.Errorf("解析JSON失败: %v", err)
-	}
-
-	if !result.Success {
-		return 0, fmt.Errorf("response status fail")
-	}
-
-	if len(result.Data) > 0 {
-		return float64(result.Data[0].Balance) / 1000000.0, nil
-	}
-	return 0, fmt.Errorf("未找到账户余额")
-}
-func (self tronChain) GetAccountBalanceTRC(address string) (float64, error) {
-	urlStr := "https://api.trongrid.io/account/token_asset_overview"
-	param := url.Values{}
-	param.Add("address", address)
-	mynet.GetQuery(urlStr, param, time.Second*5, func(ret []byte, httpCode int) error {
+	var accInfo *AccountInfo = nil
+	if err := mynet.DoReq("GET", url, func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
+		r.Header.Set("Content-Type", "application/json")
+		return true, time.Second * 10, nil
+	}, func(ret []byte, httpCode int) error {
 		if httpCode != http.StatusOK {
-			return fmt.Errorf("")
+			return fmt.Errorf("%d:%s", httpCode, string(ret))
 		}
 
-		return nil
-	}, nil)
+		var retMap map[string]any
+		if err := json.Unmarshal(ret, &retMap); err != nil {
+			return err
+		}
 
-	return 0, fmt.Errorf("token not found")
+		if b, ok := retMap["success"]; ok {
+			if b.(bool) { //成功
+				if v, okk := retMap["data"]; okk {
+					if tmpSlice, okk1 := v.([]any); okk1 {
+						if len(tmpSlice) > 0 {
+							jb, err := json.Marshal(tmpSlice[0])
+							if err != nil {
+								return err
+							}
+
+							if err := json.Unmarshal(jb, &accInfo); err != nil {
+								return err
+							}
+
+							return nil
+						}
+					}
+				}
+			}
+		}
+
+		return fmt.Errorf("不是期望的数据格式")
+	}, nil); err != nil {
+		return nil, err
+	}
+
+	return accInfo, nil
 }
 
 // 查询账户交易记录

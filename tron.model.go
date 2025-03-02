@@ -1,5 +1,7 @@
 package mychain
 
+import "fmt"
+
 type (
 	TronTrResult struct {
 		ContractRet string `json:"contractRet"`
@@ -77,4 +79,41 @@ type (
 		AssetInUsd      float64 `json:"assetInUsd"`
 		Percent         int     `json:"percent"`
 	}
+
+	//账号详情
+	AccountInfo struct {
+		Balance int64               `json:"balance"` //单位Sun （1 TRX = 1,000,000 sun）
+		TRC20   []map[string]string `json:"trc20"`   //合约地址（key）和余额（value），余额单位为最小计量单位
+	}
 )
+
+func (self *AccountInfo) GetTrxBalance() float64 {
+	return float64(self.Balance) / 1e6 // sun 转 TRX
+}
+
+// 获取 TRC20 代币余额
+func (self *AccountInfo) GetTrc20Balance() float64 {
+	if self.TRC20 == nil || len(self.TRC20) == 0 {
+		return 0
+	}
+	
+	const usdtDecimals int = 6
+	for _, token := range self.TRC20 {
+		if balanceStr, exists := token[ContractAddrTronTrc20]; exists {
+			var balance float64
+			fmt.Sscanf(balanceStr, "%f", &balance)
+			return balance / float64(pow(10, usdtDecimals))
+		}
+	}
+
+	return 0
+}
+
+// 快速计算 10 的次方
+func pow(base, exp int) int {
+	result := 1
+	for i := 0; i < exp; i++ {
+		result *= base
+	}
+	return result
+}

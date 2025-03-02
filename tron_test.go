@@ -6,7 +6,7 @@ import (
 )
 
 func TestTronChain_HexToTronAddress(t *testing.T) {
-	tronAddr, err := ImpTron("").HexToAddrStr("412c681e6dee9fe1bb764f70efa052d2458aa8f0c8")
+	tronAddr, err := ImpTron("").HexToAddrStr("a614f803b6fd780986a42c78ec9c7f77e6ded13c")
 	if err != nil {
 		t.Errorf("hex to tron addr err:%v", err)
 		return
@@ -47,27 +47,23 @@ func TestTronChain_CreateNewAccount(t *testing.T) {
 }
 
 func TestTronChain_GetAccountBalance(t *testing.T) {
-	ret, err := ImpTron("").GetAccountBalanceTRX("TTYmKjuWUr5yJh24d66wg3SCdfFmBrsmgR")
+	ret, err := ImpTron("").GetAccountBalanceTRX("TUJyJCt4SfW15tJYCWnWg6LjRAmmNAnHbM")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	ret2, err := ImpTron("").GetAccountBalanceTRC("TTYmKjuWUr5yJh24d66wg3SCdfFmBrsmgR")
-	if err != nil {
-		t.Error(err)
-	}
-
-	t.Log("get balance:", ret, ret2)
+	t.Logf("get balance:%.6f", ret)
 }
 
 func TestTronChain_GetAccountBalanceTRC(t *testing.T) {
-	ret, err := ImpTron("").GetAccountBalanceTRC("TTYmKjuWUr5yJh24d66wg3SCdfFmBrsmgR")
+	ret, err := ImpTron("").GetAccountBalance("TUJyJCt4SfW15tJYCWnWg6LjRAmmNAnHbM")
 	if err != nil {
 		t.Error(err)
 	}
 
-	t.Log("get balance:", ret)
+	t.Logf("get balance trx:%.6f", ret.GetTrxBalance())
+	t.Logf("get balance trc-20:%.6f U", ret.GetTrc20Balance())
 }
 
 func TestTronChain_GetAccountTransactions(t *testing.T) {
