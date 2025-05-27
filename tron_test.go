@@ -46,16 +46,6 @@ func TestTronChain_CreateNewAccount(t *testing.T) {
 	t.Log("create ok,r2", r2)
 }
 
-func TestTronChain_GetAccountBalance(t *testing.T) {
-	ret, err := ImpTron("").GetAccountBalanceTRX("TUJyJCt4SfW15tJYCWnWg6LjRAmmNAnHbM")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	t.Logf("get balance:%.6f", ret)
-}
-
 func TestTronChain_GetAccountBalanceTRC(t *testing.T) {
 	ret, err := ImpTron("").GetAccountBalance("TUJyJCt4SfW15tJYCWnWg6LjRAmmNAnHbM")
 	if err != nil {
