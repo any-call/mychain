@@ -20,6 +20,15 @@ type (
 	}
 )
 
+func (self BtcTxInfo) TimeStamp() int64 {
+	t, err := time.ParseInLocation("2006-01-02 15:04:05", self.Time, time.UTC)
+	if err != nil {
+		return 0
+	}
+
+	return t.UnixMilli()
+}
+
 type btcChain struct {
 }
 

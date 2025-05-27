@@ -35,6 +35,6 @@ func TestBtcChain_GetTrans(t *testing.T) {
 	}
 
 	for i, _ := range list {
-		t.Logf("from:%s to %s :%.8f %s", list[i].FromAddress, list[i].ToAddress, list[i].AmountBTC, list[i].Currency)
+		t.Logf("from:%s to %s :%.8f %s on %s %d", list[i].FromAddress, list[i].ToAddress, list[i].AmountBTC, list[i].Currency, list[i].Time, list[i].TimeStamp())
 	}
 }
