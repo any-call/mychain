@@ -6,6 +6,7 @@ import (
 	"github.com/any-call/gobase/util/mylog"
 	"github.com/any-call/gobase/util/mynet"
 	"net/http"
+	"strings"
 	"time"
 )
 
@@ -181,6 +182,75 @@ func (self btcChain) GetTrans(txID string, timeout time.Duration) (info []BtcTxI
 				})
 			}
 
+			return nil
+		}, nil); err != nil {
+		return nil, err
+	}
+
+	return
+}
+
+func (self btcChain) GetBatchTrans(txids []string, timeout time.Duration) (info []BtcTxInfo, err error) {
+	type blockCypherTx struct {
+		Hash      string `json:"hash"`
+		Confirmed string `json:"confirmed"`
+		Inputs    []struct {
+			Addresses []string `json:"addresses"`
+		} `json:"inputs"`
+		Outputs []struct {
+			Addresses []string `json:"addresses"`
+			Value     int64    `json:"value"` // 单位为 Satoshi
+		} `json:"outputs"`
+	}
+
+	url := fmt.Sprintf("https://api.blockcypher.com/v1/btc/main/txs/%s", strings.Join(txids, ";"))
+	//mylog.Info("url is :", url)
+	if err = mynet.DoReq("GET", url,
+		func(r *http.Request) (isTls bool, tm time.Duration, err error) {
+			r.Header.Add("Content-Type", "application/json")
+			return true, timeout, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode != http.StatusOK {
+				return fmt.Errorf("http err code:%v[%s]", httpCode, string(ret))
+			}
+
+			var txList []blockCypherTx
+			// 当只有一笔交易时，返回的是 object 而不是 array
+			if strings.HasPrefix(string(ret), "{") {
+				var singleTx blockCypherTx
+				if err := json.Unmarshal(ret, &singleTx); err != nil {
+					return fmt.Errorf("unmarshal single tx failed: %v", err)
+				}
+				txList = append(txList, singleTx)
+			} else {
+				if err := json.Unmarshal(ret, &txList); err != nil {
+					return fmt.Errorf("unmarshal tx list failed: %v", err)
+				}
+			}
+
+			for _, tx := range txList {
+				from := "Multiple"
+				if len(tx.Inputs) == 1 && len(tx.Inputs[0].Addresses) == 1 {
+					from = tx.Inputs[0].Addresses[0]
+				}
+				to := ""
+				amount := float64(0)
+				for _, out := range tx.Outputs {
+					if len(out.Addresses) > 0 {
+						to = out.Addresses[0]
+						amount = float64(out.Value) / 1e8 // Satoshi 转 BTC
+						break
+					}
+				}
+				info = append(info, BtcTxInfo{
+					TxID:        tx.Hash,
+					Time:        tx.Confirmed,
+					FromAddress: from,
+					ToAddress:   to,
+					AmountBTC:   amount,
+					Currency:    "BTC",
+				})
+			}
 			return nil
 		}, nil); err != nil {
 		return nil, err

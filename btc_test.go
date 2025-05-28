@@ -38,3 +38,18 @@ func TestBtcChain_GetTrans(t *testing.T) {
 		t.Logf("from:%s to %s :%.8f %s on %s %d", list[i].FromAddress, list[i].ToAddress, list[i].AmountBTC, list[i].Currency, list[i].Time, list[i].TimeStamp())
 	}
 }
+
+func TestBtcChain_GetBatchTrans(t *testing.T) {
+	list, err := ImpBtcChain().GetBatchTrans([]string{
+		"2db804356c23d012038ab1d7f4e9b1836f2f352ed1a285f6d7c0ebbd0aae9cf4",
+		"4fe96e37a11fee2439e63906d5e917c9d8490e1201a700a3286b650931d9c191",
+	}, time.Second*10)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for i, _ := range list {
+		t.Logf("%s \n from:%s to %s :%.8f %s on %s %d", list[i].TxID, list[i].FromAddress, list[i].ToAddress, list[i].AmountBTC, list[i].Currency, list[i].Time, list[i].TimeStamp())
+	}
+}
