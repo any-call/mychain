@@ -6,17 +6,17 @@ import (
 )
 
 func TestBtcChain_GetNowBlock(t *testing.T) {
-	info, err := ImpBtcChain().GetNowBlock(time.Second * 10)
+	blockNum, blockID, err := ImpBtcChain().GetLatestBlockByBlockcypher(time.Second * 10)
 	if err != nil {
 		t.Error(err)
 		return
 	}
 
-	t.Log("latest block :", info)
+	t.Log("latest block :", blockNum, blockID)
 }
 
 func TestBtcChain_GetFullTrans(t *testing.T) {
-	list, err := ImpBtcChain().GetFullTxID(898363, time.Second*10, time.Second)
+	list, err := ImpBtcChain().GetFullTxIDByBlockcypher("0000000000000000000239e82a345f6b7f87a816fa66ec888b44e87999015463", time.Second*10, time.Second)
 	if err != nil {
 		t.Error(err)
 		return
@@ -27,22 +27,18 @@ func TestBtcChain_GetFullTrans(t *testing.T) {
 	}
 }
 
-func TestBtcChain_GetTrans(t *testing.T) {
-	list, err := ImpBtcChain().GetTrans("2db804356c23d012038ab1d7f4e9b1836f2f352ed1a285f6d7c0ebbd0aae9cf4", time.Second*10)
-	if err != nil {
-		t.Error(err)
-		return
-	}
-
-	for i, _ := range list {
-		t.Logf("from:%s to %s :%.8f %s on %s %d", list[i].FromAddress, list[i].ToAddress, list[i].AmountBTC, list[i].Currency, list[i].Time, list[i].TimeStamp())
-	}
-}
-
 func TestBtcChain_GetBatchTrans(t *testing.T) {
 	list, err := ImpBtcChain().GetBatchTrans([]string{
-		"2db804356c23d012038ab1d7f4e9b1836f2f352ed1a285f6d7c0ebbd0aae9cf4",
-		"4fe96e37a11fee2439e63906d5e917c9d8490e1201a700a3286b650931d9c191",
+		//"97682f372c9a4080a6baa9b564c778390386de615e71df16d205996151fe3f8a",
+		//"f8ca0d030836fe643a13c9bcc57ee59994511c926a00ac1457b17cfde8f58f3a",
+		//"94e631edb4e553f5fb0645f7785d010d2c0a94ee8eb6f9e4e622a1cdce876504",
+		"05d6c47c0b5392b93af37de198e1a2dec4c2490074bae6ed0667e53cf1760165",
+		"ad154059ad06bca1f92161d2ceb73553759ec21f748ee1c213e010a362a945c0",
+		"5c0fbefe94e9dadf93894924949b8f93bf7fa021b9671cab85d14c5732e44f75",
+		//"eec4b294d7a91ba9c9cbbbc8a8dacb23dfddcadc4ebe25f84809f9532e33d814",
+		//"bda3a5de79abddcd4584d5caa74a164dc1bfff5b3bdfde9f9a8a4507d216e10c",
+		//"6fa04993ba9f2ab573f9256e8803dad47a4d47d19592175cfe08e43a5b792f7c",
+		//"c94121fc88fb0b279130e503ae8379e5abb3b6ae643198507e87e2caa1ba235a",
 	}, time.Second*10)
 	if err != nil {
 		t.Error(err)

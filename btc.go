@@ -190,6 +190,85 @@ func (self btcChain) GetTrans(txID string, timeout time.Duration) (info []BtcTxI
 	return
 }
 
+func (self btcChain) GetLatestBlockByBlockcypher(timeout time.Duration) (info int64, blockId string, err error) {
+	type TmpBlock struct {
+		Height int64  `json:"height"`
+		Hash   string `json:"hash"`
+	}
+
+	if err = mynet.DoReq("GET", "https://api.blockcypher.com/v1/btc/main",
+		func(r *http.Request) (isTls bool, tm time.Duration, err error) {
+			r.Header.Add("Content-Type", "application/json")
+			return true, timeout, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode != http.StatusOK {
+				return fmt.Errorf("http err code:%v[%s]", httpCode, string(ret))
+			}
+
+			var tmp TmpBlock
+			if err := json.Unmarshal(ret, &tmp); err != nil {
+				return err
+			}
+			info = tmp.Height
+			blockId = tmp.Hash
+			return nil
+		}, nil); err != nil {
+		return 0, "", err
+	}
+
+	return
+}
+
+func (self btcChain) GetFullTxIDByBlockcypher(blockHash string, timeout time.Duration, sleepOnPage time.Duration) (list []string, err error) {
+	type TransactionData struct {
+		TxIDs     []string `json:"txids"`
+		NextTxIDs string   `json:"next_txids"`
+	}
+	offseet := 1
+	list = make([]string, 0, 8000)
+
+	for {
+		//mylog.Info("offset is :", offseet)
+		var txData TransactionData
+		err = mynet.DoReq("GET", fmt.Sprintf("https://api.blockcypher.com/v1/btc/main/blocks/%s?txstart=%d&limit=500", blockHash, offseet),
+			func(r *http.Request) (isTls bool, tm time.Duration, err error) {
+				r.Header.Add("Content-Type", "application/json")
+				return true, timeout, nil
+			}, func(ret []byte, httpCode int) error {
+				if httpCode != http.StatusOK {
+					return fmt.Errorf("http err code:%v[%s]", httpCode, string(ret))
+				}
+
+				if err := json.Unmarshal(ret, &txData); err != nil {
+					return err
+				}
+				return nil
+			}, nil)
+		if err != nil {
+			break
+		}
+
+		if txData.TxIDs == nil || len(txData.TxIDs) == 0 {
+			break
+		}
+
+		list = append(list, txData.TxIDs...)
+
+		if len(txData.TxIDs) < 500 { //说明是最后一页了
+			break
+		}
+
+		offseet += 500
+		time.Sleep(sleepOnPage) //加点延迟防止被限流
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return list, nil
+}
+
 func (self btcChain) GetBatchTrans(txids []string, timeout time.Duration) (info []BtcTxInfo, err error) {
 	type blockCypherTx struct {
 		Hash      string `json:"hash"`
@@ -204,14 +283,13 @@ func (self btcChain) GetBatchTrans(txids []string, timeout time.Duration) (info 
 	}
 
 	url := fmt.Sprintf("https://api.blockcypher.com/v1/btc/main/txs/%s", strings.Join(txids, ";"))
-	//mylog.Info("url is :", url)
 	if err = mynet.DoReq("GET", url,
 		func(r *http.Request) (isTls bool, tm time.Duration, err error) {
 			r.Header.Add("Content-Type", "application/json")
 			return true, timeout, nil
 		}, func(ret []byte, httpCode int) error {
 			if httpCode != http.StatusOK {
-				return fmt.Errorf("http err code:%v[%s]", httpCode, string(ret))
+				return fmt.Errorf("http err code:%v", httpCode)
 			}
 
 			var txList []blockCypherTx
