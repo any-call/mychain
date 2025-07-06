@@ -325,7 +325,10 @@ func (self tronChain) GetAccountBalance(address string) (*AccountInfo, error) {
 							if err := json.Unmarshal(jb, &accInfo); err != nil {
 								return err
 							}
-
+							return nil
+						} else {
+							//说是链上没有数据，
+							accInfo = &AccountInfo{}
 							return nil
 						}
 					}
