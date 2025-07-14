@@ -1,6 +1,7 @@
 package mychain
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -57,10 +58,16 @@ func TestTronChain_GetAccountBalanceTRC(t *testing.T) {
 }
 
 func TestTronChain_GetAccountTransactions(t *testing.T) {
-	ret, err := ImpTron("").GetAccountTransactions("TTYmKjuWUr5yJh24d66wg3SCdfFmBrsmgR")
+	ret, err := ImpTron("").GetAccountTransactions("TY5y5zx7FzJiMXRyzj1uio2GeHNBv4tTsw")
 	if err != nil {
 		t.Error(err)
 		return
 	}
-	t.Log("get transactions:", ret)
+
+	for i, _ := range ret {
+		jb, _ := json.Marshal(ret[i])
+		t.Log("jb is :", string(jb))
+		//	t.Logf("get transactions [%d]:%v", i, ret[i])
+	}
+
 }
