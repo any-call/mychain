@@ -2,8 +2,11 @@ package mychain
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/any-call/gobase/util/mynet"
+	"io"
+	"math/big"
 	"net/http"
 	"regexp"
 	"strings"
@@ -71,4 +74,59 @@ func (self ethChain) IsValidAddress(address string) bool {
 	}
 
 	return true
+}
+
+func (self ethChain) GetETHBalance(address string) (float64, error) {
+	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=balance&address=%s&tag=latest&apikey=AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P", address)
+	return self.fetchAndConvert(url, 18)
+}
+
+func (self ethChain) GetUSDTBalance(address string) (float64, error) {
+	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P",
+		ContractAddrERCUSDT, address)
+	return self.fetchAndConvert(url, 6)
+}
+
+func (self ethChain) GetUSDCBalance(address string) (float64, error) {
+	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P",
+		ContractAddrERCUSDC, address)
+	return self.fetchAndConvert(url, 6)
+}
+
+// 通用查询并转换为 float64
+func (self ethChain) fetchAndConvert(url string, decimals int) (float64, error) {
+	resp, err := http.Get(url)
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	body, _ := io.ReadAll(resp.Body)
+
+	type balanceResp struct {
+		Status  string `json:"status"`
+		Message string `json:"message"`
+		Result  string `json:"result"`
+	}
+
+	var r balanceResp
+	if err := json.Unmarshal(body, &r); err != nil {
+		return 0, err
+	}
+	if r.Status != "1" {
+		return 0, errors.New("API error: " + r.Message)
+	}
+
+	// 使用 big.Int 处理大数字，再转为 float64
+	b := new(big.Int)
+	b.SetString(r.Result, 10)
+
+	denom := new(big.Float).SetFloat64(1)
+	for i := 0; i < decimals; i++ {
+		denom.Mul(denom, big.NewFloat(10))
+	}
+
+	amount := new(big.Float).Quo(new(big.Float).SetInt(b), denom)
+
+	f64, _ := amount.Float64()
+	return f64, nil
 }

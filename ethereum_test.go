@@ -3,6 +3,7 @@ package mychain
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestEthChain_IsValidAddress(t *testing.T) {
@@ -10,4 +11,27 @@ func TestEthChain_IsValidAddress(t *testing.T) {
 	t.Log("check result :", b)
 	t.Log(strings.ToLower("1CE24Ad9908A0964acC91b8EdbD104DD6F9FFAC4"))
 	t.Log(strings.ToLower("0017da119Ff092F6c3019F6490385E921067f657"))
+}
+
+func TestEthChain_GetETHBalance(t *testing.T) {
+	v, err := ImpEth().GetETHBalance("0xAbEd708f795B57Cb31D1ce793f244d58FF8c30a7")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Logf("get eth is :%v", v)
+	time.Sleep(time.Second)
+	v, err = ImpEth().GetUSDTBalance("0xAbEd708f795B57Cb31D1ce793f244d58FF8c30a7")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Logf("get usdt is :%v", v)
+	time.Sleep(time.Second)
+	v, err = ImpEth().GetUSDCBalance("0xAbEd708f795B57Cb31D1ce793f244d58FF8c30a7")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+	t.Logf("get usdc is :%v", v)
 }
