@@ -1,6 +1,9 @@
 package mychain
 
-import "fmt"
+import (
+	"fmt"
+	"math/big"
+)
 
 type (
 	TronTrResult struct {
@@ -85,6 +88,29 @@ type (
 		Balance int64               `json:"balance"` //单位Sun （1 TRX = 1,000,000 sun）
 		TRC20   []map[string]string `json:"trc20"`   //合约地址（key）和余额（value），余额单位为最小计量单位
 	}
+
+	// TRC20Tx 表示一个 TRC20 交易记录
+	TRC20Tx struct {
+		TxID      string `json:"transaction_id"`
+		From      string `json:"from"`
+		To        string `json:"to"`
+		TokenInfo struct {
+			Symbol   string `json:"symbol"` //代币符号，常用于判断是否为 USDT
+			Name     string `json:"name"`   //代币合约地址，最准确的识别方式
+			Address  string `json:"address"`
+			Decimals int    `json:"decimals"` //精度，用于 value 转换成实际金额
+		} `json:"token_info"`
+		Value string `json:"value"` // 注意是字符串，需自行转换
+	}
+
+	// TRXTx 代表一条 TRX 主币转账交易
+	TRXTx struct {
+		TxID      string `json:"txID"`
+		Timestamp int64  `json:"block_timestamp"`
+		From      string
+		To        string
+		Amount    int64 // 单位：sun（1 TRX = 1_000_000 sun）
+	}
 )
 
 func (self *AccountInfo) GetTrxBalance() float64 {
@@ -96,7 +122,7 @@ func (self *AccountInfo) GetTrc20Balance() float64 {
 	if self.TRC20 == nil || len(self.TRC20) == 0 {
 		return 0
 	}
-	
+
 	const usdtDecimals int = 6
 	for _, token := range self.TRC20 {
 		if balanceStr, exists := token[ContractAddrTronTrc20]; exists {
@@ -107,6 +133,36 @@ func (self *AccountInfo) GetTrc20Balance() float64 {
 	}
 
 	return 0
+}
+
+func (t *TRC20Tx) ToUsdt() float64 {
+	if t.TokenInfo.Symbol != "USDT" {
+		return 0.0
+	}
+
+	valueInt := new(big.Int)
+	if _, ok := valueInt.SetString(t.Value, 10); !ok {
+		return 0.0
+	}
+
+	decimals := t.TokenInfo.Decimals
+	if decimals <= 0 {
+		decimals = 6 // fallback
+	}
+
+	valueFloat := new(big.Float).SetInt(valueInt)
+	scale := new(big.Float).SetFloat64(float64(1))
+	for i := 0; i < decimals; i++ {
+		scale.Mul(scale, big.NewFloat(10))
+	}
+	usdtValue := new(big.Float).Quo(valueFloat, scale)
+
+	result, _ := usdtValue.Float64()
+	return result
+}
+
+func (t *TRXTx) ToTrx() float64 {
+	return float64(t.Amount) / 1_000_000
 }
 
 // 快速计算 10 的次方

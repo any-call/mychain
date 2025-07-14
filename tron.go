@@ -344,35 +344,146 @@ func (self tronChain) GetAccountBalance(address string) (*AccountInfo, error) {
 	return accInfo, nil
 }
 
-// 查询账户交易记录
-func (self tronChain) GetAccountTransactions(address string) ([]interface{}, error) {
-	url := fmt.Sprintf("https://api.trongrid.io/v1/accounts/%s/transactions", address)
-
-	resp, err := http.Get(url)
-	if err != nil {
-		return nil, fmt.Errorf("查询交易记录失败: %v", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != 200 {
-		return nil, fmt.Errorf("获取交易记录失败，状态码: %d", resp.StatusCode)
+// 查询账户 Trc20交易记录
+func (self tronChain) GetAccAllTrc20Transactions(address string, limit int, freqTimeout time.Duration) ([]TRC20Tx, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 200
 	}
 
-	var result struct {
-		Data []interface{} `json:"data"`
+	var allTxs []TRC20Tx
+	var fingerprint string
+
+	// trc20Response 表示 API 的响应结构
+	type trc20Response struct {
+		Data []TRC20Tx `json:"data"`
+		Meta struct {
+			Fingerprint string `json:"fingerprint"`
+		} `json:"meta"`
 	}
 
-	body, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("读取响应失败: %v", err)
+	for {
+		url := fmt.Sprintf("https://api.trongrid.io/v1/accounts/%s/transactions/trc20?limit=%d", address, limit)
+		if fingerprint != "" {
+			url += "&fingerprint=" + fingerprint
+		}
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("请求失败: %w", err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("状态码错误: %d\n%s", resp.StatusCode, string(body))
+		}
+
+		var res trc20Response
+		if err := json.Unmarshal(body, &res); err != nil {
+			return nil, fmt.Errorf("JSON 解析失败: %w", err)
+		}
+
+		if len(res.Data) == 0 {
+			break // 没有更多交易
+		}
+
+		allTxs = append(allTxs, res.Data...)
+
+		if res.Meta.Fingerprint == "" {
+			break
+		}
+		fingerprint = res.Meta.Fingerprint
+
+		// 防止请求过快被限流
+		time.Sleep(freqTimeout)
 	}
 
-	err = json.Unmarshal(body, &result)
-	if err != nil {
-		return nil, fmt.Errorf("解析JSON失败: %v", err)
+	return allTxs, nil
+}
+
+// 查询账户 Trx交易记录
+func (self tronChain) GetAccAllTrxTransactions(address string, limit int, freqTimeout time.Duration) ([]TRXTx, error) {
+	if limit <= 0 || limit > 200 {
+		limit = 200
 	}
 
-	return result.Data, nil
+	var allTxs []TRXTx
+	var fingerprint string
+
+	// rawTransaction 是原始交易结构
+	type rawTransaction struct {
+		TxID      string `json:"txID"`
+		Timestamp int64  `json:"block_timestamp"`
+		RawData   struct {
+			Contract []struct {
+				Type      string `json:"type"`
+				Parameter struct {
+					Value struct {
+						OwnerAddress string `json:"owner_address"`
+						ToAddress    string `json:"to_address"`
+						Amount       int64  `json:"amount"`
+					} `json:"value"`
+				} `json:"parameter"`
+			} `json:"contract"`
+		} `json:"raw_data"`
+	}
+
+	// trxResponse 用于接收分页返回
+	type trxResponse struct {
+		Data []rawTransaction `json:"data"`
+		Meta struct {
+			Fingerprint string `json:"fingerprint"`
+		} `json:"meta"`
+	}
+
+	for {
+		url := fmt.Sprintf("https://api.trongrid.io/v1/accounts/%s/transactions?limit=%d", address, limit)
+		if fingerprint != "" {
+			url += "&fingerprint=" + fingerprint
+		}
+		url += "&only_confirmed=true" //只取确认的交易记录
+
+		resp, err := http.Get(url)
+		if err != nil {
+			return nil, fmt.Errorf("请求失败: %w", err)
+		}
+		body, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("状态码错误: %d\n%s", resp.StatusCode, string(body))
+		}
+
+		var res trxResponse
+		if err := json.Unmarshal(body, &res); err != nil {
+			return nil, fmt.Errorf("JSON解析失败: %w", err)
+		}
+
+		for _, raw := range res.Data {
+			for _, c := range raw.RawData.Contract {
+				if c.Type == "TransferContract" {
+					from, _ := self.HexToAddrStr(c.Parameter.Value.OwnerAddress) //decodeBase58Address(c.Parameter.Value.OwnerAddress)
+					to, _ := self.HexToAddrStr(c.Parameter.Value.ToAddress)      //decodeBase58Address(c.Parameter.Value.ToAddress)
+					tx := TRXTx{
+						TxID:      raw.TxID,
+						Timestamp: raw.Timestamp,
+						From:      from,
+						To:        to,
+						Amount:    c.Parameter.Value.Amount,
+					}
+					allTxs = append(allTxs, tx)
+				}
+			}
+		}
+
+		if res.Meta.Fingerprint == "" {
+			break
+		}
+		fingerprint = res.Meta.Fingerprint
+		time.Sleep(freqTimeout)
+	}
+
+	return allTxs, nil
 }
 
 func bytesEqual(a, b []byte) bool {
