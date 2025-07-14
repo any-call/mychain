@@ -72,6 +72,16 @@ type (
 			WithdrawalsRoot string `json:"withdrawalsRoot"`
 		} `json:"result"`
 	}
+
+	EthTx struct {
+		Hash        string `json:"hash"`
+		From        string `json:"from"`
+		To          string `json:"to"`
+		Value       string `json:"value"`     // string 类型防止超长
+		TokenName   string `json:"tokenName"` // 仅 ERC20 有效
+		TokenSymbol string `json:"tokenSymbol"`
+		TimeStamp   string `json:"timeStamp"`
+	}
 )
 
 func (self *EthBlockNum) ToNumber() int64 {
