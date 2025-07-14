@@ -94,6 +94,20 @@ func (self ethChain) GetUSDCBalance(address string) (float64, error) {
 	return self.fetchAndConvert(url, 6)
 }
 
+func (self ethChain) GetETHTransactions(address string) ([]EthTx, error) {
+	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=txlist&address=%s&startblock=0&endblock=99999999&sort=desc&apikey=%s",
+		address, self.apiKey)
+	return self.fetchTransactions(url)
+}
+
+func (self ethChain) GetUSDTTransactions(address string) ([]EthTx, error) {
+	return self.fetchERC20Transactions(address, ContractAddrERCUSDT)
+}
+
+func (self ethChain) GetUSDCTransactions(address string) ([]EthTx, error) {
+	return self.fetchERC20Transactions(address, ContractAddrERCUSDC)
+}
+
 // 通用查询并转换为 float64
 func (self ethChain) fetchAndConvert(url string, decimals int) (float64, error) {
 	resp, err := http.Get(url)

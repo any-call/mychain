@@ -1,6 +1,11 @@
 package mychain
 
-import "github.com/any-call/gobase/util/mystr"
+import (
+	"github.com/any-call/gobase/util/mystr"
+	"math/big"
+	"strconv"
+	"time"
+)
 
 type (
 	EthBlockNum struct {
@@ -87,4 +92,35 @@ type (
 func (self *EthBlockNum) ToNumber() int64 {
 	ret, _ := mystr.HexToInt64(self.Result)
 	return ret
+}
+
+// 内嵌方法：转为 float64 金额（自动判断 TokenSymbol 小数位）
+func (t EthTx) ToAmount() float64 {
+	val, ok := new(big.Int).SetString(t.Value, 10)
+	if !ok {
+		return 0
+	}
+
+	// 判断小数位，ETH 是 18 位，USDT/USDC 是 6 位
+	decimals := 18
+	switch t.TokenSymbol {
+	case "USDT", "USDC":
+		decimals = 6
+	}
+	denom := new(big.Float).SetFloat64(1)
+	for i := 0; i < decimals; i++ {
+		denom.Mul(denom, big.NewFloat(10))
+	}
+	amount := new(big.Float).Quo(new(big.Float).SetInt(val), denom)
+	f, _ := amount.Float64()
+	return f
+}
+
+// 转为时间类型 time.Time（UTC 时间）
+func (t EthTx) ToTimeStamp() time.Time {
+	ts, err := strconv.ParseInt(t.TimeStamp, 10, 64)
+	if err != nil {
+		return time.Time{} // 空时间
+	}
+	return time.Unix(ts, 0)
 }
