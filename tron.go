@@ -344,6 +344,39 @@ func (self tronChain) GetAccountBalance(address string) (*AccountInfo, error) {
 	return accInfo, nil
 }
 
+func (self tronChain) GetBlockNumber(txID string) (int64, error) {
+	url := fmt.Sprintf("https://apilist.tronscanapi.com/api/transaction-info?hash=%s", txID)
+
+	var blockId int64
+	if err := mynet.DoReq("GET", url, func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
+		r.Header.Set("Content-Type", "application/json")
+		return true, time.Second * 10, nil
+	}, func(ret []byte, httpCode int) error {
+		if httpCode != http.StatusOK {
+			return fmt.Errorf("%d:%s", httpCode, string(ret))
+		}
+
+		var result struct {
+			Block int64 `json:"block"`
+		}
+
+		if err := json.Unmarshal(ret, &result); err != nil {
+			return err
+		}
+
+		if result.Block == 0 {
+			return fmt.Errorf("transaction not found")
+		}
+
+		blockId = result.Block
+		return nil
+	}, nil); err != nil {
+		return 0, err
+	}
+
+	return blockId, nil
+}
+
 // 查询账户 Trc20交易记录
 func (self tronChain) GetAccAllTrc20Transactions(address string, limit int, freqTimeout time.Duration) ([]TRC20Tx, error) {
 	if limit <= 0 || limit > 200 {
@@ -412,9 +445,10 @@ func (self tronChain) GetAccAllTrxTransactions(address string, limit int, freqTi
 
 	// rawTransaction 是原始交易结构
 	type rawTransaction struct {
-		TxID      string `json:"txID"`
-		Timestamp int64  `json:"block_timestamp"`
-		RawData   struct {
+		TxID        string `json:"txID"`
+		Timestamp   int64  `json:"block_timestamp"`
+		BlockNumber int64  `json:"blockNumber"`
+		RawData     struct {
 			Contract []struct {
 				Type      string `json:"type"`
 				Parameter struct {
@@ -465,11 +499,12 @@ func (self tronChain) GetAccAllTrxTransactions(address string, limit int, freqTi
 					from, _ := self.HexToAddrStr(c.Parameter.Value.OwnerAddress) //decodeBase58Address(c.Parameter.Value.OwnerAddress)
 					to, _ := self.HexToAddrStr(c.Parameter.Value.ToAddress)      //decodeBase58Address(c.Parameter.Value.ToAddress)
 					tx := TRXTx{
-						TxID:      raw.TxID,
-						Timestamp: raw.Timestamp,
-						From:      from,
-						To:        to,
-						Amount:    c.Parameter.Value.Amount,
+						TxID:        raw.TxID,
+						Timestamp:   raw.Timestamp,
+						BlockNumber: raw.BlockNumber,
+						From:        from,
+						To:          to,
+						Amount:      c.Parameter.Value.Amount,
 					}
 					allTxs = append(allTxs, tx)
 				}

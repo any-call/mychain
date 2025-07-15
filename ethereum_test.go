@@ -13,8 +13,22 @@ func TestEthChain_IsValidAddress(t *testing.T) {
 	t.Log(strings.ToLower("0017da119Ff092F6c3019F6490385E921067f657"))
 }
 
+func TestEthChain_GetETHTransactions(t *testing.T) {
+	v, err := ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").
+		GetETHTransactions("0x0011f4d21657905d3f90945db12b2516c075d2e0")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for _, item := range v {
+		t.Log(" block numer:", item.BlockNumber)
+	}
+}
+
 func TestEthChain_GetETHBalance(t *testing.T) {
-	v, err := ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").GetETHBalance("0xAbEd708f795B57Cb31D1ce793f244d58FF8c30a7")
+	v, err := ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").
+		GetETHBalance("0x000ce2e2c276d93ef3df286b28292c2fb9f121e9")
 	if err != nil {
 		t.Error(err)
 		return

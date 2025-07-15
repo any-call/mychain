@@ -3,6 +3,7 @@ package mychain
 import (
 	"fmt"
 	"math/big"
+	"time"
 )
 
 type (
@@ -91,10 +92,12 @@ type (
 
 	// TRC20Tx 表示一个 TRC20 交易记录
 	TRC20Tx struct {
-		TxID      string `json:"transaction_id"`
-		From      string `json:"from"`
-		To        string `json:"to"`
-		TokenInfo struct {
+		TxID        string `json:"transaction_id"`
+		Timestamp   int64  `json:"block_timestamp"`
+		BlockNumber int64  `json:"block_number"` // ✅ 增加区块高度
+		From        string `json:"from"`
+		To          string `json:"to"`
+		TokenInfo   struct {
 			Symbol   string `json:"symbol"` //代币符号，常用于判断是否为 USDT
 			Name     string `json:"name"`   //代币合约地址，最准确的识别方式
 			Address  string `json:"address"`
@@ -105,11 +108,12 @@ type (
 
 	// TRXTx 代表一条 TRX 主币转账交易
 	TRXTx struct {
-		TxID      string `json:"txID"`
-		Timestamp int64  `json:"block_timestamp"`
-		From      string
-		To        string
-		Amount    int64 // 单位：sun（1 TRX = 1_000_000 sun）
+		TxID        string `json:"txID"`
+		Timestamp   int64  `json:"block_timestamp"`
+		BlockNumber int64  // ✅ 区块高度
+		From        string
+		To          string
+		Amount      int64 // 单位：sun（1 TRX = 1_000_000 sun）
 	}
 )
 
@@ -161,8 +165,16 @@ func (t *TRC20Tx) ToUsdt() float64 {
 	return result
 }
 
+func (t *TRC20Tx) ToTime() time.Time {
+	return time.UnixMilli(t.Timestamp)
+}
+
 func (t *TRXTx) ToTrx() float64 {
 	return float64(t.Amount) / 1_000_000
+}
+
+func (t *TRXTx) ToTime() time.Time {
+	return time.UnixMilli(t.Timestamp)
 }
 
 // 快速计算 10 的次方

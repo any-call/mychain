@@ -57,7 +57,7 @@ func TestTronChain_GetAccountBalanceTRC(t *testing.T) {
 }
 
 func TestTronChain_GetAccountTransactions(t *testing.T) {
-	ret, err := ImpTron("").GetAccAllTrxTransactions("TGpBWMwqJVLfvwDrq84wKvHTYPoLRNrzCv", 100, time.Second)
+	ret, err := ImpTron("").GetAccAllTrxTransactions("TX4x5hbKZLcF3cY3L86YNpTtLTykBy9HbH", 100, time.Second)
 	if err != nil {
 		t.Error(err)
 		return
@@ -65,8 +65,27 @@ func TestTronChain_GetAccountTransactions(t *testing.T) {
 
 	for i, _ := range ret {
 		//jb, _ := json.Marshal(ret[i])
-		//t.Log("js is :", string(jb))
-		t.Logf("get transactions [%d]:from %s to %s :%v %s", i, ret[i].From, ret[i].To, ret[i].ToTrx(), "TRX")
+		t.Logf("get transactions [%d]:from %s to %s :%v %s ;block:%d %s", i, ret[i].From, ret[i].To, ret[i].ToTrx(), "TRX", ret[i].BlockNumber, ret[i].ToTime().Format("2006-01-02 15:04:05"))
+	}
+
+}
+
+func TestTronChain_GetAccountTransactions1(t *testing.T) {
+	ret, err := ImpTron("").GetAccAllTrc20Transactions("TKt3E7XbCG4i3qzNTxZx434pi53uSqvbaR", 100, time.Second)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	for i, _ := range ret {
+		//jb, _ := json.Marshal(ret[i])
+		if ret[i].BlockNumber == 0 {
+			var err error
+			if ret[i].BlockNumber, err = ImpTron("").GetBlockNumber(ret[i].TxID); err != nil {
+				t.Log("get block number err:", err)
+			}
+		}
+		t.Logf("get transactions [%d]:from %s to %s :%v %s ;block:%d %s", i, ret[i].From, ret[i].To, ret[i].ToUsdt(), "usdt", ret[i].BlockNumber, ret[i].ToTime().Format("2006-01-02 15:04:05"))
 	}
 
 }

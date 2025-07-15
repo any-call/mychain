@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/any-call/gobase/util/mylog"
 	"github.com/any-call/gobase/util/mynet"
 	"io"
 	"math/big"
@@ -158,7 +159,7 @@ func (self ethChain) fetchTransactions(url string) ([]EthTx, error) {
 	}
 	defer resp.Body.Close()
 	body, _ := io.ReadAll(resp.Body)
-
+	mylog.Info("body is :", string(body))
 	var r struct {
 		Status  string  `json:"status"`
 		Message string  `json:"message"`
