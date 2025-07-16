@@ -71,7 +71,7 @@ func TestTronChain_GetAccountTransactions(t *testing.T) {
 }
 
 func TestTronChain_GetAccountTransactions1(t *testing.T) {
-	ret, err := ImpTron("").GetAccAllTrc20Transactions("TKt3E7XbCG4i3qzNTxZx434pi53uSqvbaR", 100, time.Second)
+	ret, err := ImpTron("").GetAccAllTrc20Transactions("TMQZvoqhaWFSJYHCJMmbjD13bpxieqgCwP", 100, time.Second)
 	if err != nil {
 		t.Error(err)
 		return

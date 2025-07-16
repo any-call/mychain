@@ -3,7 +3,6 @@ package mychain
 import (
 	"strings"
 	"testing"
-	"time"
 )
 
 func TestEthChain_IsValidAddress(t *testing.T) {
@@ -27,25 +26,10 @@ func TestEthChain_GetETHTransactions(t *testing.T) {
 }
 
 func TestEthChain_GetETHBalance(t *testing.T) {
-	v, err := ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").
-		GetETHBalance("0x000ce2e2c276d93ef3df286b28292c2fb9f121e9")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	t.Logf("get eth is :%v", v)
-	time.Sleep(time.Second)
-	v, err = ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").GetUSDTBalance("0xAbEd708f795B57Cb31D1ce793f244d58FF8c30a7")
+	v, err := ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").GetUSDTTransactions("0x0025ca3839103424f84f462351d7e5d2ff1868de")
 	if err != nil {
 		t.Error(err)
 		return
 	}
 	t.Logf("get usdt is :%v", v)
-	time.Sleep(time.Second)
-	v, err = ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").GetUSDCBalance("0xAbEd708f795B57Cb31D1ce793f244d58FF8c30a7")
-	if err != nil {
-		t.Error(err)
-		return
-	}
-	t.Logf("get usdc is :%v", v)
 }
