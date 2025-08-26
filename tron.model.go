@@ -2,6 +2,7 @@ package mychain
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 )
@@ -124,6 +125,13 @@ type (
 		Signature  []string `json:"signature,omitempty"`
 		Error      string   `json:"Error,omitempty"`
 	}
+
+	NetworkRes struct {
+		TotalNetLimit     int64 `json:"TotalNetLimit"`
+		TotalNetWeight    int64 `json:"TotalNetWeight"`
+		TotalEnergyLimit  int64 `json:"TotalEnergyLimit"`
+		TotalEnergyWeight int64 `json:"TotalEnergyWeight"`
+	}
 )
 
 func (self *AccountInfo) GetTrxBalance() float64 {
@@ -184,6 +192,24 @@ func (t *TRXTx) ToTrx() float64 {
 
 func (t *TRXTx) ToTime() time.Time {
 	return time.UnixMilli(t.Timestamp)
+}
+
+func (self *NetworkRes) CalcTrxForEnergy(energy int64) (float64, error) {
+	if self.TotalEnergyLimit == 0 {
+		return 0, fmt.Errorf("TotalEnergyLimit = 0, 无法计算")
+	}
+
+	trx := float64(energy) * float64(self.TotalEnergyWeight) / float64(self.TotalEnergyLimit)
+	return math.Round(trx*1e6) / 1e6, nil
+}
+
+// 计算获取指定带宽所需的TRX
+func (self *NetworkRes) CalcTrxForBandwidth(net int64) (float64, error) {
+	if self.TotalNetLimit == 0 {
+		return 0, fmt.Errorf("TotalNetLimit = 0, 无法计算")
+	}
+	trx := float64(net) * float64(self.TotalNetWeight) / float64(self.TotalNetLimit)
+	return math.Round(trx*1e6) / 1e6, nil
 }
 
 // 快速计算 10 的次方

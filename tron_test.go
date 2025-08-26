@@ -99,3 +99,15 @@ func TestTronChain_FreezeEnergy(t *testing.T) {
 
 	t.Log("ret is :", ret)
 }
+
+func TestTronChain_GetTotalNetworkRes(t *testing.T) {
+	res, err := ImpTron("").GetTotalNetworkRes()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	a, _ := res.CalcTrxForEnergy(10000)
+	b, _ := res.CalcTrxForBandwidth(10000)
+	t.Log("res is :", a, b)
+}

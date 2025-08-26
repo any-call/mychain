@@ -709,6 +709,48 @@ func (self tronChain) SendFreezeEnergyTrans(owner, receiver string, trxAmount in
 	return self.BroadcastTrans(tx)
 }
 
+// 取全网资源参数
+func (self tronChain) GetTotalNetworkRes() (res *NetworkRes, err error) {
+	if err = mynet.DoReq("POST", "https://api.trongrid.io/wallet/getaccountresource",
+		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
+			r.Header.Add("accept", "application/json")
+			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
+
+			if b, err := json.Marshal(map[string]any{
+				"address": "TNoP3HyZkfip2H88QkVyF5P3GSX9ax6gyT",
+				"visible": true,
+			}); err != nil {
+				return false, 0, err
+			} else {
+				r.Body = io.NopCloser(bytes.NewBuffer(b))
+				r.Header.Add("Content-Length", strconv.Itoa(len(b)))
+			}
+
+			return true, time.Second * 15, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode == http.StatusOK {
+				if err = json.Unmarshal(ret, &res); err != nil {
+					return err
+				}
+
+				if res.TotalEnergyLimit <= 0 || res.TotalNetLimit <= 0 {
+					return fmt.Errorf("invalid network resource data")
+				}
+
+				return nil
+			}
+
+			return fmt.Errorf("http err code:%v", httpCode)
+		}, nil); err != nil {
+		return nil, err
+	}
+
+	return res, nil
+}
+
 func bytesEqual(a, b []byte) bool {
 	if len(a) != len(b) {
 		return false
