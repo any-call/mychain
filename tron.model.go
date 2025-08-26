@@ -115,6 +115,15 @@ type (
 		To          string
 		Amount      int64 // 单位：sun（1 TRX = 1_000_000 sun）
 	}
+
+	// TronTransaction Tron返回的交易体
+	TronTransaction struct {
+		TxID       string   `json:"txID"`
+		RawData    any      `json:"raw_data"`
+		RawDataHex string   `json:"raw_data_hex"`
+		Signature  []string `json:"signature,omitempty"`
+		Error      string   `json:"Error,omitempty"`
+	}
 )
 
 func (self *AccountInfo) GetTrxBalance() float64 {

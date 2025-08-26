@@ -10,7 +10,9 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/any-call/gobase/frame/myctrl"
 	"github.com/any-call/gobase/util/mynet"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mr-tron/base58"
 	"golang.org/x/crypto/ripemd160"
 	"io"
@@ -519,6 +521,192 @@ func (self tronChain) GetAccAllTrxTransactions(address string, limit int, freqTi
 	}
 
 	return allTxs, nil
+}
+
+// 创建质押能量的交易
+func (self tronChain) CreateFreezeEnergyTrans(owner, receiver string, trxAmount int64, isBandwidth bool) (info *TronTransaction, err error) {
+	if receiver == "" {
+		receiver = owner
+	}
+
+	hexOwner, err := self.AddrToHexStr(owner)
+	if err != nil {
+		return nil, err
+	}
+
+	hexReceiver, err := self.AddrToHexStr(receiver)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = mynet.DoReq("POST", "https://api.trongrid.io/wallet/freezebalancev2",
+		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
+			r.Header.Add("accept", "application/json")
+			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
+
+			if b, err := json.Marshal(map[string]any{
+				"owner_address":  hexOwner,
+				"frozen_balance": trxAmount * 1_000_000, // TRX -> Sun
+				"resource": myctrl.ObjFun(func() string {
+					if isBandwidth {
+						return "BANDWIDTH"
+					}
+					return "ENERGY"
+				}),
+				"receiver_address": hexReceiver,
+			}); err != nil {
+				return false, 0, err
+			} else {
+				r.Body = io.NopCloser(bytes.NewBuffer(b))
+				r.Header.Add("Content-Length", strconv.Itoa(len(b)))
+			}
+
+			return true, time.Second * 15, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode == http.StatusOK {
+				return json.Unmarshal(ret, &info)
+			}
+
+			return fmt.Errorf("http err code:%v", httpCode)
+		}, nil); err != nil {
+		return nil, err
+	}
+
+	if info.Error != "" {
+		return nil, fmt.Errorf("tron error:%s", info.Error)
+	}
+
+	return info, nil
+}
+
+// tron 原生币 trx 交易
+func (self tronChain) CreateTrxTrans(from, to string, amount int64) (info *TronTransaction, err error) {
+	hexFrom, err := self.AddrToHexStr(from)
+	if err != nil {
+		return nil, err
+	}
+
+	hexTo, err := self.AddrToHexStr(to)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = mynet.DoReq("POST", "https://api.trongrid.io/wallet/createtransaction",
+		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
+			r.Header.Add("accept", "application/json")
+			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
+
+			if b, err := json.Marshal(map[string]any{
+				"owner_address": hexFrom,
+				"to_address":    hexTo,
+				"amount":        amount * 1_000_000, // TRX -> Sun
+			}); err != nil {
+				return false, 0, err
+			} else {
+				r.Body = io.NopCloser(bytes.NewBuffer(b))
+				r.Header.Add("Content-Length", strconv.Itoa(len(b)))
+			}
+
+			return true, time.Second * 15, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode == http.StatusOK {
+				return json.Unmarshal(ret, &info)
+			}
+
+			return fmt.Errorf("http err code:%v", httpCode)
+		}, nil); err != nil {
+		return nil, err
+	}
+
+	if info.Error != "" {
+		return nil, fmt.Errorf("tron error:%s", info.Error)
+	}
+
+	return info, nil
+}
+
+// SignTronTransaction 对 Tron 的 raw_data_hex 进行签名
+func (self tronChain) SignTrans(tx *TronTransaction, privateKeyHex string) error {
+	// 1. 解码 raw_data_hex
+	rawData, err := hex.DecodeString(tx.RawDataHex)
+	if err != nil {
+		return fmt.Errorf("decode raw_data_hex failed: %w", err)
+	}
+
+	// 2. keccak256 哈希
+	hash := crypto.Keccak256(rawData)
+
+	// 3. 加载私钥
+	privKey, err := crypto.HexToECDSA(privateKeyHex)
+	if err != nil {
+		return fmt.Errorf("invalid private key: %w", err)
+	}
+
+	// 4. 签名
+	signature, err := crypto.Sign(hash, privKey)
+	if err != nil {
+		return fmt.Errorf("sign failed: %w", err)
+	}
+
+	// 5. 返回 hex 字符串
+	tx.Signature = []string{hex.EncodeToString(signature)}
+	return nil
+}
+
+// 广播交易
+func (self tronChain) BroadcastTrans(tx *TronTransaction) (info string, err error) {
+	if err = mynet.DoReq("POST", "https://api.trongrid.io/wallet/broadcasttransaction",
+		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
+			r.Header.Add("accept", "application/json")
+			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
+
+			if b, err := json.Marshal(tx); err != nil {
+				return false, 0, err
+			} else {
+				r.Body = io.NopCloser(bytes.NewBuffer(b))
+				r.Header.Add("Content-Length", strconv.Itoa(len(b)))
+			}
+
+			return true, time.Second * 15, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode == http.StatusOK {
+				info = string(ret)
+				return nil
+			}
+
+			return fmt.Errorf("http err code:%v", httpCode)
+		}, nil); err != nil {
+		return "", err
+	}
+
+	return info, nil
+}
+
+// 发送质押能交易
+func (self tronChain) SendFreezeEnergyTrans(owner, receiver string, trxAmount int64, isBandwidth bool, privatedKey string) (string, error) {
+	//1：创建交易
+	tx, err := self.CreateFreezeEnergyTrans(owner, receiver, trxAmount, isBandwidth)
+	if err != nil {
+		return "", err
+	}
+
+	//2:签名 交易
+	err = self.SignTrans(tx, privatedKey)
+	if err != nil {
+		return "", err
+	}
+
+	//3:广播交易
+	return self.BroadcastTrans(tx)
 }
 
 func bytesEqual(a, b []byte) bool {

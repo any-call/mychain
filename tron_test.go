@@ -89,3 +89,13 @@ func TestTronChain_GetAccountTransactions1(t *testing.T) {
 	}
 
 }
+
+func TestTronChain_FreezeEnergy(t *testing.T) {
+	ret, err := ImpTron("").CreateFreezeEnergyTrans("TNoP3HyZkfip2H88QkVyF5P3GSX9ax6gyT", "", 5, true)
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Log("ret is :", ret)
+}
