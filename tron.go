@@ -582,6 +582,65 @@ func (self tronChain) CreateFreezeEnergyTrans(owner, receiver string, trxAmount 
 	return info, nil
 }
 
+// 创建质押能量的交易
+func (self tronChain) CreateUnFreezeEnergyTrans(owner, receiver string, trxAmount int64, isBandwidth bool) (info *TronTransaction, err error) {
+	if receiver == "" {
+		receiver = owner
+	}
+
+	hexOwner, err := self.AddrToHexStr(owner)
+	if err != nil {
+		return nil, err
+	}
+
+	hexReceiver, err := self.AddrToHexStr(receiver)
+	if err != nil {
+		return nil, err
+	}
+
+	if err = mynet.DoReq("POST", "https://api.trongrid.io/wallet/unfreezebalancev2",
+		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
+			r.Header.Add("accept", "application/json")
+			r.Header.Add("Content-Type", "application/json")
+			if self.apiKey != "" {
+				r.Header.Set("TRON-PRO-API-KEY", self.apiKey)
+			}
+
+			if b, err := json.Marshal(map[string]any{
+				"owner_address":    hexOwner,
+				"unfreeze_balance": trxAmount * 1_000_000, // TRX -> Sun
+				"resource": myctrl.ObjFun(func() string {
+					if isBandwidth {
+						return "BANDWIDTH"
+					}
+					return "ENERGY"
+				}),
+				"receiver_address": hexReceiver,
+			}); err != nil {
+				return false, 0, err
+			} else {
+				r.Body = io.NopCloser(bytes.NewBuffer(b))
+				r.Header.Add("Content-Length", strconv.Itoa(len(b)))
+			}
+
+			return true, time.Second * 15, nil
+		}, func(ret []byte, httpCode int) error {
+			if httpCode == http.StatusOK {
+				return json.Unmarshal(ret, &info)
+			}
+
+			return fmt.Errorf("http err code:%v", httpCode)
+		}, nil); err != nil {
+		return nil, err
+	}
+
+	if info.Error != "" {
+		return nil, fmt.Errorf("tron error:%s", info.Error)
+	}
+
+	return info, nil
+}
+
 // tron 原生币 trx 交易
 func (self tronChain) CreateTrxTrans(from, to string, amount int64) (info *TronTransaction, err error) {
 	hexFrom, err := self.AddrToHexStr(from)
