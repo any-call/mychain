@@ -14,7 +14,7 @@ func TestEthChain_IsValidAddress(t *testing.T) {
 }
 
 func TestEthChain_GetNowBlockNum(t *testing.T) {
-	info, err := ImpEth("").GetNowBlockNum(time.Second * 10)
+	info, err := ImpEth("").GetNowBlockNum(time.Second * 30)
 	if err != nil {
 		t.Error(err)
 		return
@@ -37,7 +37,7 @@ func TestEthChain_GetETHTransactions(t *testing.T) {
 }
 
 func TestEthChain_GetETHBalance(t *testing.T) {
-	v, err := ImpEth("AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P").GetUSDTTransactions("0x0025ca3839103424f84f462351d7e5d2ff1868de")
+	v, err := ImpEth("").GetUSDTTransactions("0x0025ca3839103424f84f462351d7e5d2ff1868de")
 	if err != nil {
 		t.Error(err)
 		return

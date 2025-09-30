@@ -23,7 +23,7 @@ func ImpEth(apiKey string) ethChain {
 
 func (self ethChain) GetNowBlockNum(tout time.Duration) (info *EthBlockNum, err error) {
 	if err := mynet.DoReq("GET",
-		"https://api.etherscan.io/api?module=proxy&action=eth_blockNumber&apikey="+self.apiKey,
+		"https://api.etherscan.io/v2/api?chainid=1&module=proxy&action=eth_blockNumber&apikey="+self.apiKey,
 		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
 			return true, tout, nil
 		}, func(ret []byte, httpCode int) error {
@@ -39,7 +39,7 @@ func (self ethChain) GetNowBlockNum(tout time.Duration) (info *EthBlockNum, err 
 }
 
 func (self ethChain) GetBlockByNum(num int64, tout time.Duration) (info *EthBlock, err error) {
-	url := fmt.Sprintf("https://api.etherscan.io/api?module=proxy&action=eth_getBlockByNumber&boolean=true&tag=0x%X&apikey=%s", num, self.apiKey)
+	url := fmt.Sprintf("https://api.etherscan.io/v2/api?chainid=1&module=proxy&action=eth_getBlockByNumber&boolean=true&tag=0x%X&apikey=%s", num, self.apiKey)
 	if err := mynet.DoReq("GET", url,
 		func(r *http.Request) (isTls bool, timeout time.Duration, err error) {
 			return true, tout, nil
@@ -78,24 +78,24 @@ func (self ethChain) IsValidAddress(address string) bool {
 }
 
 func (self ethChain) GetETHBalance(address string) (float64, error) {
-	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=balance&address=%s&tag=latest&apikey=AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P", address)
+	url := fmt.Sprintf("https://api.etherscan.io/v2/api?chainid=1&module=account&action=balance&address=%s&tag=latest&apikey=AJES32DY7H7V4PVVPD7YYCJJKP84C37G1P", address)
 	return self.fetchAndConvert(url, 18)
 }
 
 func (self ethChain) GetUSDTBalance(address string) (float64, error) {
-	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=%s",
+	url := fmt.Sprintf("https://api.etherscan.io/v2/api?chainid=1&module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=%s",
 		ContractAddrERCUSDT, address, self.apiKey)
 	return self.fetchAndConvert(url, 6)
 }
 
 func (self ethChain) GetUSDCBalance(address string) (float64, error) {
-	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=%s",
+	url := fmt.Sprintf("https://api.etherscan.io/v2/api?chainid=1&module=account&action=tokenbalance&contractaddress=%s&address=%s&tag=latest&apikey=%s",
 		ContractAddrERCUSDC, address, self.apiKey)
 	return self.fetchAndConvert(url, 6)
 }
 
 func (self ethChain) GetETHTransactions(address string) ([]EthTx, error) {
-	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=txlist&address=%s&startblock=0&endblock=99999999&sort=desc&apikey=%s",
+	url := fmt.Sprintf("https://api.etherscan.io/v2/api?chainid=1&module=account&action=txlist&address=%s&startblock=0&endblock=99999999&sort=desc&apikey=%s",
 		address, self.apiKey)
 	return self.fetchTransactions(url)
 }
@@ -147,7 +147,7 @@ func (self ethChain) fetchAndConvert(url string, decimals int) (float64, error) 
 }
 
 func (self ethChain) fetchERC20Transactions(address, contract string) ([]EthTx, error) {
-	url := fmt.Sprintf("https://api.etherscan.io/api?module=account&action=tokentx&contractaddress=%s&address=%s&startblock=0&endblock=99999999&sort=desc&apikey=%s", contract, address, self.apiKey)
+	url := fmt.Sprintf("https://api.etherscan.io/v2/api?chainid=1&module=account&action=tokentx&contractaddress=%s&address=%s&startblock=0&endblock=99999999&sort=desc&apikey=%s", contract, address, self.apiKey)
 	return self.fetchTransactions(url)
 }
 
