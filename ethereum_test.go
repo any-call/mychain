@@ -44,3 +44,25 @@ func TestEthChain_GetETHBalance(t *testing.T) {
 	}
 	t.Logf("get usdt is :%v", v)
 }
+
+func TestEthChain_CreateAccount(t *testing.T) {
+	addr, pub, priv, err := ImpEth("").CreateAccount()
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Log("addr is :", addr)
+	t.Log("pub is :", pub)
+	t.Log("priv is :", priv)
+}
+
+func TestEthChain_PublicKeyFromPrivateKey(t *testing.T) {
+	pub, err := ImpEth("").PublicKeyFromPrivateKey("5e5d2d274ca920f5b4eb09b428650deb7991149bb06da919878e4b02a5708503")
+	if err != nil {
+		t.Error(err)
+		return
+	}
+
+	t.Log("pub is :", pub)
+}

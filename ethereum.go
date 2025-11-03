@@ -1,10 +1,13 @@
 package mychain
 
 import (
+	"crypto/ecdsa"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/any-call/gobase/util/mynet"
+	"github.com/ethereum/go-ethereum/crypto"
 	"io"
 	"math/big"
 	"net/http"
@@ -19,6 +22,48 @@ type ethChain struct {
 
 func ImpEth(apiKey string) ethChain {
 	return ethChain{apiKey: apiKey}
+}
+
+// CreateEthWallet 创建一个新的以太坊钱包
+// 返回值：address, publicKey, privateKey（全部为十六进制字符串）
+func (self ethChain) CreateAccount() (address, publicKey, privateKey string, err error) {
+	// 1. 生成私钥
+	key, err := crypto.GenerateKey()
+	if err != nil {
+		return "", "", "", fmt.Errorf("generate key failed: %w", err)
+	}
+
+	// 2. 提取私钥字节并转 hex
+	privBytes := crypto.FromECDSA(key)
+	privateKey = hex.EncodeToString(privBytes)
+
+	// 3. 提取公钥字节并转 hex
+	pubBytes := crypto.FromECDSAPub(&key.PublicKey)
+	publicKey = hex.EncodeToString(pubBytes)
+
+	// 4. 根据公钥生成地址
+	address = crypto.PubkeyToAddress(key.PublicKey).Hex()
+
+	return address, publicKey, privateKey, nil
+}
+
+func (self ethChain) PublicKeyFromPrivateKey(privateHex string) (string, error) {
+	privBytes, err := hex.DecodeString(privateHex)
+	if err != nil {
+		return "", fmt.Errorf("decode private key failed: %w", err)
+	}
+
+	// 从字节恢复私钥对象
+	privKey, err := crypto.ToECDSA(privBytes)
+	if err != nil {
+		return "", fmt.Errorf("invalid private key: %w", err)
+	}
+
+	// 导出公钥
+	pubKey := privKey.Public().(*ecdsa.PublicKey)
+	pubBytes := crypto.FromECDSAPub(pubKey)
+
+	return hex.EncodeToString(pubBytes), nil
 }
 
 func (self ethChain) GetNowBlockNum(tout time.Duration) (info *EthBlockNum, err error) {
