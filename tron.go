@@ -2,9 +2,6 @@ package mychain
 
 import (
 	"bytes"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -14,11 +11,12 @@ import (
 	"github.com/any-call/gobase/util/mynet"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/mr-tron/base58"
-	"golang.org/x/crypto/ripemd160"
+	"golang.org/x/crypto/sha3"
 	"io"
 	"net/http"
 	"regexp"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -261,40 +259,85 @@ func (self tronChain) IsValidAddress(address string) bool {
 }
 
 func (self tronChain) CreateNewAccount() (adddress, privateInfo string, err error) {
-	// 使用 ECDSA (secp256k1) 曲线生成私钥
-	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	// 1) 使用 secp256k1 生成私钥（正确！！）
+	privateKey, err := crypto.GenerateKey()
 	if err != nil {
-		return "", "", fmt.Errorf("生成私钥失败: %v", err)
+		return "", "", err
 	}
 
-	// 从私钥生成公钥
-	pubKey := append(privateKey.PublicKey.X.Bytes(), privateKey.PublicKey.Y.Bytes()...)
+	// 2) 提取未压缩公钥 0x04 + X + Y
+	pub := crypto.FromECDSAPub(&privateKey.PublicKey)
 
-	// 对公钥进行 SHA256 哈希
-	hashSHA256 := sha256.New()
-	hashSHA256.Write(pubKey)
-	pubHash := hashSHA256.Sum(nil)
+	// 3) keccak256(pub[1:]) 取后 20 字节
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(pub[1:])
+	pubHash := hash.Sum(nil)
+	addr20 := pubHash[12:] // 最后20字节
 
-	// 对 SHA256 哈希结果进行 RIPEMD160 哈希
-	ripemd160Hasher := ripemd160.New()
-	ripemd160Hasher.Write(pubHash)
-	pubRipemd160 := ripemd160Hasher.Sum(nil)
+	// 4) Tron 前缀 0x41
+	addr21 := append([]byte{0x41}, addr20...)
 
-	// 添加地址前缀 0x41（波场地址以 41 开头）
-	rawAddress := append([]byte{0x41}, pubRipemd160...)
+	// 5) Base58Check 校验
+	h1 := sha256.Sum256(addr21)
+	h2 := sha256.Sum256(h1[:])
+	checksum := h2[:4]
+	addressBytes := append(addr21, checksum...)
 
-	// 计算地址的校验和：先 SHA256 再取前 4 字节
-	checksum := sha256.Sum256(rawAddress)
-	checksum = sha256.Sum256(checksum[:])
-	address := append(rawAddress, checksum[:4]...)
+	address := base58.Encode(addressBytes)
+	privHex := hex.EncodeToString(crypto.FromECDSA(privateKey))
 
-	// 使用 Base58 编码地址
-	encodedAddress := base58.Encode(address)
+	return address, privHex, nil
+}
 
-	// 将私钥转成十六进制
-	privKeyHex := hex.EncodeToString(privateKey.D.Bytes())
+func (self tronChain) PrivKeyHexToTronAddress(privHex string) (string, error) {
+	// 清理输入
+	privHex = strings.TrimSpace(privHex)
+	if strings.HasPrefix(privHex, "0x") || strings.HasPrefix(privHex, "0X") {
+		privHex = privHex[2:]
+	}
 
-	return encodedAddress, privKeyHex, nil
+	// 私钥应为 32 字节 (64 hex chars)
+	if len(privHex) != 64 {
+		return "", errors.New("private key hex must be 64 hex characters (32 bytes)")
+	}
+
+	// decode hex -> bytes
+	privBytes, err := hex.DecodeString(privHex)
+	if err != nil {
+		return "", fmt.Errorf("invalid hex private key: %w", err)
+	}
+
+	// 使用 go-ethereum 来转换为 ecdsa 私钥
+	privKey, err := crypto.ToECDSA(privBytes)
+	if err != nil {
+		return "", fmt.Errorf("ToECDSA failed: %w", err)
+	}
+
+	// 获取未压缩公钥字节 (65 bytes, 0x04 || X(32) || Y(32))
+	pubBytes := crypto.FromECDSAPub(&privKey.PublicKey)
+	if len(pubBytes) != 65 || pubBytes[0] != 0x04 {
+		return "", errors.New("unexpected public key format")
+	}
+
+	// keccak256(pubBytes[1:])，取最后 20 字节
+	keccak := sha3.NewLegacyKeccak256()
+	keccak.Write(pubBytes[1:]) // 仅 X||Y
+	hash := keccak.Sum(nil)    // 32 bytes
+	addr20 := hash[12:]        // last 20 bytes
+
+	// Tron 前缀 0x41 ，拼成 21 字节地址
+	addr21 := append([]byte{0x41}, addr20...)
+
+	// Base58Check: 先做两次 sha256 获取 checksum 的前 4 字节
+	h1 := sha256.Sum256(addr21)
+	h2 := sha256.Sum256(h1[:])
+	checksum := h2[:4]
+
+	// 拼接并 base58 编码
+	addrWithChecksum := append(addr21, checksum...)
+	base58Addr := base58.Encode(addrWithChecksum)
+
+	return base58Addr, nil
 }
 
 func (self tronChain) GetAccountBalance(address string) (*AccountInfo, error) {
