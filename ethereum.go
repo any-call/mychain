@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"github.com/any-call/gobase/util/mynet"
 	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/crypto/sha3"
 	"io"
 	"math/big"
 	"net/http"
@@ -45,6 +46,34 @@ func (self ethChain) CreateAccount() (address, publicKey, privateKey string, err
 	address = crypto.PubkeyToAddress(key.PublicKey).Hex()
 
 	return address, publicKey, privateKey, nil
+}
+
+func (self ethChain) PrivKeyHexToTronAddress(privHex string) (string, error) {
+	// 清理输入
+	privHex = strings.TrimPrefix(privHex, "0x")
+
+	// hex → bytes
+	privKeyBytes, err := hex.DecodeString(privHex)
+	if err != nil {
+		return "", fmt.Errorf("私钥Hex无效: %w", err)
+	}
+
+	// 转为ECDSA私钥（secp256k1）
+	privateKey, err := crypto.ToECDSA(privKeyBytes)
+	if err != nil {
+		return "", fmt.Errorf("私钥转换ECDSA失败: %w", err)
+	}
+
+	// 获取未压缩公钥(65字节, 0x04 + X32 + Y32)
+	pubKeyBytes := crypto.FromECDSAPub(&privateKey.PublicKey)
+
+	// keccak256(pubKey[1:])
+	hash := sha3.NewLegacyKeccak256()
+	hash.Write(pubKeyBytes[1:])     // 去掉0x04标记
+	addrBytes := hash.Sum(nil)[12:] // 取后40 hex = 20字节
+
+	// 最终地址 0x + hex
+	return "0x" + hex.EncodeToString(addrBytes), nil
 }
 
 func (self ethChain) PublicKeyFromPrivateKey(privateHex string) (string, error) {
